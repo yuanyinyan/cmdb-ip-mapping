@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use tokio::time::Instant;
 use rlink::utils::date_time::current_timestamp;
@@ -7,7 +6,7 @@ use rlink::utils::http::client::get;
 
 lazy_static! {
     // ip and cmdbInfo config
-    static ref GLOBAL_IP_MAPPING: DashMap<String, IpMappingItem> = DashMap::new();
+    static ref GLOBAL_IP_MAPPING: DashMap<String, Vec<IpMappingItem>> = DashMap::new();
     // cmdbId and ip config
     static ref GLOBAL_CMDB_ID_IP_MAP: DashMap<String, String> = DashMap::new();
 }
@@ -36,25 +35,34 @@ pub fn load_ip_mapping_task(url: &str) {
     });
 }
 
-pub fn get_ip_mapping_config(ip: &str) -> Option<Ref<String, IpMappingItem>> {
-    let config: &DashMap<String, IpMappingItem> = &*GLOBAL_IP_MAPPING;
-    config.get(ip)
+pub fn get_ip_mapping_config(ip: &str) -> Vec<IpMappingItem> {
+    let config: &DashMap<String, Vec<IpMappingItem>> = &*GLOBAL_IP_MAPPING;
+    match config.get(ip) {
+        Some(conf) => {
+            (*conf).clone()
+        }
+        None => {
+            Vec::new()
+        }
+    }
 }
 
-fn update_ip_mapping_config(conf: HashMap<String, IpMappingItem>) {
-    let ip_mapping_config: &DashMap<String, IpMappingItem> = &*GLOBAL_IP_MAPPING;
+fn update_ip_mapping_config(conf: HashMap<String, Vec<IpMappingItem>>) {
+    let ip_mapping_config: &DashMap<String, Vec<IpMappingItem>> = &*GLOBAL_IP_MAPPING;
     let cmdb_id_ip_config: &DashMap<String, String> = &*GLOBAL_CMDB_ID_IP_MAP;
     let mut count = 0;
-    for (ip, item) in conf {
-        cmdb_id_ip_config.insert(item.id.clone(), ip.clone());
-        ip_mapping_config.insert(ip, item);
+    for (ip, vec) in conf {
+        for item in &vec {
+            cmdb_id_ip_config.insert(item.id.clone(), ip.clone());
+        }
+        ip_mapping_config.insert(ip, vec);
         count += 1;
     }
     info!("update ip mapping config,size={}", count);
 }
 
 pub fn update_ip_mapping_by_id(item: IpMappingItem, is_del: bool) {
-    let ip_mapping_config: &DashMap<String, IpMappingItem> = &*GLOBAL_IP_MAPPING;
+    let ip_mapping_config: &DashMap<String, Vec<IpMappingItem>> = &*GLOBAL_IP_MAPPING;
     let cmdb_id_ip_config: &DashMap<String, String> = &*GLOBAL_CMDB_ID_IP_MAP;
     let cmdb_id = item.id.clone();
     match cmdb_id_ip_config.get(cmdb_id.as_str()) {
@@ -65,13 +73,23 @@ pub fn update_ip_mapping_by_id(item: IpMappingItem, is_del: bool) {
                 ip_mapping_config.remove(ip.as_str());
             } else {
                 info!("update ip mapping:{}-{:?}", ip, item);
-                ip_mapping_config.insert(ip, item);
+                let vec = match ip_mapping_config.get(ip.as_str()) {
+                    Some(config) => {
+                        (*config).clone()
+                    }
+                    None => {
+                        vec![item]
+                    }
+                };
+                ip_mapping_config.insert(ip, vec);
             }
         }
         None => {
-            let ip = item.primary_ip.clone();
-            info!("add ip mapping:{}-{:?}", ip, item);
-            ip_mapping_config.insert(ip, item);
+            if item.primary_ip.is_some() {
+                let ip = item.primary_ip.as_ref().unwrap();
+                info!("add ip mapping:{}-{:?}", ip, item);
+                ip_mapping_config.insert(ip.to_string(), vec![item]);
+            };
         }
     }
 }
@@ -87,22 +105,19 @@ async fn load_remote_ip_mapping(url: &str) {
     }
 }
 
-fn parse_conf(context: String) -> HashMap<String, IpMappingItem> {
-    let mut map = HashMap::new();
+fn parse_conf(context: String) -> HashMap<String, Vec<IpMappingItem>> {
     match parse_context(context) {
-        Ok(vec) => {
-            for item in vec {
-                map.insert(item.primary_ip.clone(), item);
-            }
+        Ok(map) => {
+            map
         }
         Err(e) => {
-            error!("ip mapping config parse error.{}", e)
+            error!("ip mapping config parse error.{}", e);
+            HashMap::new()
         }
     }
-    map
 }
 
-fn parse_context(context: String) -> serde_json::Result<Vec<IpMappingItem>> {
+fn parse_context(context: String) -> serde_json::Result<HashMap<String, Vec<IpMappingItem>>> {
     let response: IpMappingResponse = serde_json::from_str(context.as_str())?;
     Ok(response.result)
 }
@@ -110,33 +125,39 @@ fn parse_context(context: String) -> serde_json::Result<Vec<IpMappingItem>> {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct IpMappingResponse {
     code: i8,
-    result: Vec<IpMappingItem>,
+    result: HashMap<String, Vec<IpMappingItem>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IpMappingItem {
     pub id: String,
     #[serde(rename = "primaryIp")]
-    pub primary_ip: String,
+    pub primary_ip: Option<String>,
+    #[serde(rename = "otherIp")]
+    pub other_ip: Option<String>,
     #[serde(rename = "appUk")]
-    pub app_uk: String,
+    pub app_uk: Option<String>,
     #[serde(rename = "groupEnvironment")]
     pub group_environment: Option<String>,
     #[serde(rename = "logicIdcUk")]
     pub logical_idc_uk: Option<String>,
     #[serde(rename = "areaUk")]
     pub area_uk: Option<String>,
+    #[serde(rename = "port")]
+    pub port: Option<String>,
 }
 
 impl IpMappingItem {
     pub fn new() -> Self {
         IpMappingItem {
             id: String::new(),
-            primary_ip: String::new(),
-            app_uk: String::new(),
+            primary_ip: None,
+            other_ip: None,
+            app_uk: None,
             group_environment: None,
             logical_idc_uk: None,
             area_uk: None,
+            port: None,
         }
     }
 }

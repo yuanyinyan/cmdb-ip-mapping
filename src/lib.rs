@@ -13,8 +13,8 @@
 //!
 //! load_ip_mapping_task(ip_mapping_url);
 //!
-//! let option = get_ip_mapping_config(ip);
-//! assert!(option.unwrap().app_uk.eq("dssteamyyjk.java.ip.appuk.mapping"))
+//! let vec = get_ip_mapping_config(ip);
+//! assert!(vec.get(0).unwrap().app_uk.as_ref().unwrap().eq("dssteamyyjk.java.ip.appuk.mapping"))
 //! ```
 //!
 //! ## Consume ip-mapping incremental change
@@ -65,8 +65,7 @@ mod tests {
 
         load_ip_mapping_task(ip_mapping_url);
 
-        let option = get_ip_mapping_config(ip);
-        assert!(option.is_some());
-        assert!(option.unwrap().app_uk.eq("dssteamyyjk.java.ip.appuk.mapping"))
+        let vec = get_ip_mapping_config(ip);
+        assert!(vec.get(0).unwrap().app_uk.as_ref().unwrap().eq("dssteamyyjk.java.ip.appuk.mapping"))
     }
 }
