@@ -8,21 +8,21 @@
 //! ```
 //! use cmdb_ip_mapping::ip_mapping_config::{load_ip_mapping_task, get_ip_mapping_config};
 //!
-//! let ip = "10.99.5.49";
-//! let ip_mapping_url = "http://ipappukmapping.17usoft.com/mapping/all";
+//! let ip = "test_ip";
+//! let ip_mapping_url = "test_mapping_url";
 //!
 //! load_ip_mapping_task(ip_mapping_url);
 //!
 //! let vec = get_ip_mapping_config(ip);
-//! assert!(vec.get(0).unwrap().app_uk.as_ref().unwrap().eq("dssteamyyjk.java.ip.appuk.mapping"))
+//! assert!(vec.get(0).unwrap().app_uk.as_ref().unwrap().eq("test_app_uk"))
 //! ```
 //!
 //! ## Consume ip-mapping incremental change
 //! ```
 //! use std::collections::HashMap;
-//! use rlink_kafka_connector::{BOOTSTRAP_SERVERS, GROUP_ID, create_input_format};
 //! use rlink::functions::broadcast_flat_map::BroadcastFlagMapFunction;
 //! use cmdb_ip_mapping::ip_mapping_connect::IpMappingCoProcessFunction;
+//! use rlink_connector_kafka::{BOOTSTRAP_SERVERS, GROUP_ID, create_input_format};
 //!
 //! let ip_mapping_input_format = {
 //!     let mut conf_map = HashMap::new();
@@ -61,11 +61,11 @@ mod tests {
     #[test]
     fn it_works() {
         let ip = "10.99.5.49";
-        let ip_mapping_url = "http://ipappukmapping.17usoft.com/mapping/all";
+        let ip_mapping_url = "http://10.99.5.49:8080/mapping/all";
 
         load_ip_mapping_task(ip_mapping_url);
 
         let vec = get_ip_mapping_config(ip);
-        assert!(vec.get(0).unwrap().app_uk.as_ref().unwrap().eq("dssteamyyjk.java.ip.appuk.mapping"))
+        assert!(vec.get(0).unwrap().group_environment.as_ref().unwrap().eq("qa"))
     }
 }

@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 use rlink::api;
 use rlink::api::element::Record;
 use rlink::api::function::{CoProcessFunction, Context};
-use rlink_kafka_connector::KafkaRecord;
+use rlink_connector_kafka::KafkaRecord;
 use crate::ip_mapping_config::{update_ip_mapping_by_id, IpMappingItem};
 
 #[derive(Debug, Function)]
