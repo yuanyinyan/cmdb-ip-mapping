@@ -1,6 +1,6 @@
 [package]
 name = "cmdb-ip-mapping"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["袁殷 <2212079150@qq.com>"]
 edition = "2018"
 description = "Get appuk by ip from cmdb in rlink task."
@@ -12,9 +12,9 @@ license = "MIT/Apache-2.0"
 name = "cmdb_ip_mapping"
 
 [dependencies]
-rlink = "0.3"
+rlink = "0.4"
 rlink-derive = "0.2"
-rlink-connector-kafka = "0.3"
+rlink-connector-kafka = "0.4"
 
 log = "0.4"
 

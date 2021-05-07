@@ -28,7 +28,7 @@ impl CoProcessFunction for IpMappingCoProcessFunction {
         stream_seq: usize,
         mut record: Record,
     ) -> Box<dyn Iterator<Item = Record>> {
-        let mut kafka_record = KafkaRecord::new(record.borrow_mut());
+        let kafka_record = KafkaRecord::new(record.borrow_mut());
         let payload = match kafka_record.get_kafka_payload() {
             Ok(payload) => payload,
             _ => return Box::new(vec![].into_iter()),
