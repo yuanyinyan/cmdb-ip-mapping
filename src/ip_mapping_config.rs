@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+
+use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
-use tokio::time::Instant;
 use rlink::utils::date_time::current_timestamp;
 use rlink::utils::http::client::get;
+use tokio::time::Instant;
 
 lazy_static! {
     // ip and cmdbInfo config
@@ -13,7 +15,9 @@ lazy_static! {
 
 pub fn load_ip_mapping_task(url: &str) {
     let url = url.to_string();
-    tokio::runtime::Runtime::new()
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
         .unwrap()
         .block_on(load_remote_ip_mapping(url.as_str()));
 
@@ -25,7 +29,8 @@ pub fn load_ip_mapping_task(url: &str) {
 
     std::thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let mut interval = tokio::time::interval_at(start, std::time::Duration::from_secs(period));
+            let mut interval =
+                tokio::time::interval_at(start, std::time::Duration::from_secs(period));
             loop {
                 interval.tick().await;
 
@@ -35,16 +40,9 @@ pub fn load_ip_mapping_task(url: &str) {
     });
 }
 
-pub fn get_ip_mapping_config(ip: &str) -> Vec<IpMappingItem> {
+pub fn get_ip_mapping_config(ip: &str) -> Option<Ref<'_, String, Vec<IpMappingItem>>> {
     let config: &DashMap<String, Vec<IpMappingItem>> = &*GLOBAL_IP_MAPPING;
-    match config.get(ip) {
-        Some(conf) => {
-            (*conf).clone()
-        }
-        None => {
-            Vec::new()
-        }
-    }
+    config.get(ip)
 }
 
 fn update_ip_mapping_config(conf: HashMap<String, Vec<IpMappingItem>>) {
@@ -74,9 +72,7 @@ pub fn update_ip_mapping_by_id(item: IpMappingItem, is_del: bool) {
             } else {
                 info!("update ip mapping:{}-{:?}", ip, item);
                 let vec = match ip_mapping_config.get(ip.as_str()) {
-                    Some(config) => {
-                        (*config).clone()
-                    }
+                    Some(config) => (*config).clone(),
                     None => {
                         vec![item]
                     }
@@ -98,34 +94,50 @@ async fn load_remote_ip_mapping(url: &str) {
     match get(url).await {
         Ok(context) => {
             info!("load ip mapping conf");
-            let conf = parse_conf(context);
-            update_ip_mapping_config(conf);
+            match parse_conf(context) {
+                Ok(conf) => {
+                    update_ip_mapping_config(conf);
+                }
+                Err(e) => {
+                    error!("ip mapping config parse error.{}", e);
+                }
+            }
         }
         Err(e) => error!("get ip mapping config error. {}", e),
     }
 }
 
-fn parse_conf(context: String) -> HashMap<String, Vec<IpMappingItem>> {
-    match parse_context(context) {
-        Ok(map) => {
-            map
-        }
-        Err(e) => {
-            error!("ip mapping config parse error.{}", e);
-            HashMap::new()
-        }
+fn parse_conf(context: String) -> Result<HashMap<String, Vec<IpMappingItem>>, csv::Error> {
+    let mut items = Vec::new();
+    let mut reader = csv::Reader::from_reader(context.as_bytes());
+    for result in reader.deserialize() {
+        let item: IpMappingItem = result?;
+        items.push(item);
     }
+
+    let mut map: HashMap<String, Vec<IpMappingItem>> = HashMap::new();
+    for item in items {
+        add_ip_mapping(item.primary_ip.clone(), item.clone(), &mut map);
+        add_ip_mapping(item.other_ip.clone(), item, &mut map);
+    }
+    Ok(map)
 }
 
-fn parse_context(context: String) -> serde_json::Result<HashMap<String, Vec<IpMappingItem>>> {
-    let response: IpMappingResponse = serde_json::from_str(context.as_str())?;
-    Ok(response.result)
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct IpMappingResponse {
-    code: i8,
-    result: HashMap<String, Vec<IpMappingItem>>,
+fn add_ip_mapping(
+    ip: Option<String>,
+    item: IpMappingItem,
+    map: &mut HashMap<String, Vec<IpMappingItem>>,
+) {
+    if let Some(ip) = ip {
+        match map.get_mut(ip.as_str()) {
+            None => {
+                map.insert(ip, vec![item]);
+            }
+            Some(vec) => {
+                vec.push(item);
+            }
+        };
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -14,7 +14,8 @@
 //! load_ip_mapping_task(ip_mapping_url);
 //!
 //! let vec = get_ip_mapping_config(ip);
-//! assert!(vec.get(0).unwrap().app_uk.as_ref().unwrap().eq("test_app_uk"))
+//! let item = vec.unwrap().get(0).unwrap().clone();
+//! assert!(item.group_environment.as_ref().unwrap().eq("qa"))
 //! ```
 //!
 //! ## Consume ip-mapping incremental change
@@ -61,11 +62,12 @@ mod tests {
     #[test]
     fn it_works() {
         let ip = "10.99.5.49";
-        let ip_mapping_url = "http://10.99.5.49:8080/mapping/all";
+        let ip_mapping_url = "http://10.99.5.49:8080/mapping/all/v2";
 
         load_ip_mapping_task(ip_mapping_url);
 
         let vec = get_ip_mapping_config(ip);
-        assert!(vec.get(0).unwrap().group_environment.as_ref().unwrap().eq("qa"))
+        let item = vec.unwrap().get(0).unwrap().clone();
+        assert!(item.group_environment.as_ref().unwrap().eq("qa"))
     }
 }

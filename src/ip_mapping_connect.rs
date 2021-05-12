@@ -1,8 +1,10 @@
 use std::borrow::BorrowMut;
-use rlink::api;
-use rlink::api::element::Record;
-use rlink::api::function::{CoProcessFunction, Context};
+
+use rlink::core;
+use rlink::core::element::Record;
+use rlink::core::function::{CoProcessFunction, Context};
 use rlink_connector_kafka::KafkaRecord;
+
 use crate::ip_mapping_config::{update_ip_mapping_by_id, IpMappingItem};
 
 #[derive(Debug, Function)]
@@ -15,7 +17,7 @@ impl IpMappingCoProcessFunction {
 }
 
 impl CoProcessFunction for IpMappingCoProcessFunction {
-    fn open(&mut self, _context: &Context) -> api::Result<()> {
+    fn open(&mut self, _context: &Context) -> core::Result<()> {
         Ok(())
     }
 
@@ -48,7 +50,7 @@ impl CoProcessFunction for IpMappingCoProcessFunction {
         Box::new(vec![].into_iter())
     }
 
-    fn close(&mut self) -> api::Result<()> {
+    fn close(&mut self) -> core::Result<()> {
         Ok(())
     }
 }
