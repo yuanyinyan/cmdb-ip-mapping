@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn it_works() {
         let ip = "10.99.5.49";
-        let ip_mapping_url = "http://10.99.5.49:8080/mapping/all/v2";
+        let ip_mapping_url = "http://10.99.5.49:8080/mapping/all";
 
         load_ip_mapping_task(ip_mapping_url);
 

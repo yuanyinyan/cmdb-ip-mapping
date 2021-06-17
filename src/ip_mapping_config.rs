@@ -107,37 +107,15 @@ async fn load_remote_ip_mapping(url: &str) {
     }
 }
 
-fn parse_conf(context: String) -> Result<HashMap<String, Vec<IpMappingItem>>, csv::Error> {
-    let mut items = Vec::new();
-    let mut reader = csv::Reader::from_reader(context.as_bytes());
-    for result in reader.deserialize() {
-        let item: IpMappingItem = result?;
-        items.push(item);
-    }
-
-    let mut map: HashMap<String, Vec<IpMappingItem>> = HashMap::new();
-    for item in items {
-        add_ip_mapping(item.primary_ip.clone(), item.clone(), &mut map);
-        add_ip_mapping(item.other_ip.clone(), item, &mut map);
-    }
-    Ok(map)
+fn parse_conf(context: String) -> serde_json::Result<HashMap<String, Vec<IpMappingItem>>> {
+    let response: IpMappingResponse = serde_json::from_str(context.as_str())?;
+    Ok(response.result)
 }
 
-fn add_ip_mapping(
-    ip: Option<String>,
-    item: IpMappingItem,
-    map: &mut HashMap<String, Vec<IpMappingItem>>,
-) {
-    if let Some(ip) = ip {
-        match map.get_mut(ip.as_str()) {
-            None => {
-                map.insert(ip, vec![item]);
-            }
-            Some(vec) => {
-                vec.push(item);
-            }
-        };
-    }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct IpMappingResponse {
+    code: i8,
+    result: HashMap<String, Vec<IpMappingItem>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
