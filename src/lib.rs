@@ -21,9 +21,9 @@
 //! ## Consume ip-mapping incremental change
 //! ```
 //! use std::collections::HashMap;
-//! use rlink::functions::broadcast_flat_map::BroadcastFlagMapFunction;
 //! use cmdb_ip_mapping::ip_mapping_connect::IpMappingCoProcessFunction;
 //! use rlink_connector_kafka::{BOOTSTRAP_SERVERS, GROUP_ID, create_input_format};
+//! use rlink::functions::flat_map::BroadcastFlagMapFunction;
 //!
 //! let ip_mapping_input_format = {
 //!     let mut conf_map = HashMap::new();
