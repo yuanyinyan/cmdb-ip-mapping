@@ -1,9 +1,7 @@
-use std::borrow::BorrowMut;
-
 use rlink::core;
-use rlink::core::element::Record;
+use rlink::core::element::{Record, FnSchema};
 use rlink::core::function::{CoProcessFunction, Context};
-use rlink_connector_kafka::KafkaRecord;
+use rlink_connector_kafka::buffer_gen::kafka_message;
 
 use crate::ip_mapping_config::{update_ip_mapping_by_id, IpMappingItem};
 
@@ -30,10 +28,11 @@ impl CoProcessFunction for IpMappingCoProcessFunction {
         stream_seq: usize,
         mut record: Record,
     ) -> Box<dyn Iterator<Item = Record>> {
-        let kafka_record = KafkaRecord::new(record.borrow_mut());
-        let payload = match kafka_record.get_kafka_payload() {
-            Ok(payload) => payload,
-            _ => return Box::new(vec![].into_iter()),
+        let payload = match kafka_message::Entity::parse(record.as_buffer()) {
+            Ok(entity) => entity.payload,
+            _ => {
+                return Box::new(vec![].into_iter());
+            }
         };
         let line = match String::from_utf8(payload.to_vec()) {
             Ok(line) => line,
@@ -52,6 +51,10 @@ impl CoProcessFunction for IpMappingCoProcessFunction {
 
     fn close(&mut self) -> core::Result<()> {
         Ok(())
+    }
+
+    fn schema(&self, _input_schema: FnSchema) -> FnSchema {
+        FnSchema::Empty
     }
 }
 
