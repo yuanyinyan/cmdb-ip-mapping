@@ -1,6 +1,6 @@
 [package]
 name = "cmdb-ip-mapping"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["袁殷 <2212079150@qq.com>"]
 edition = "2018"
 description = "Get appuk by ip from cmdb in rlink task."

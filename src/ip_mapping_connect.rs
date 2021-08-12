@@ -6,11 +6,15 @@ use rlink_connector_kafka::buffer_gen::kafka_message;
 use crate::ip_mapping_config::{update_ip_mapping_by_id, IpMappingItem};
 
 #[derive(Debug, Function)]
-pub struct IpMappingCoProcessFunction {}
+pub struct IpMappingCoProcessFunction {
+    fn_schema: FnSchema
+}
 
 impl IpMappingCoProcessFunction {
-    pub fn new() -> Self {
-        IpMappingCoProcessFunction {}
+    pub fn new(fn_schema: FnSchema) -> Self {
+        IpMappingCoProcessFunction {
+            fn_schema
+        }
     }
 }
 
@@ -54,7 +58,7 @@ impl CoProcessFunction for IpMappingCoProcessFunction {
     }
 
     fn schema(&self, _input_schema: FnSchema) -> FnSchema {
-        FnSchema::Empty
+        self.fn_schema.clone()
     }
 }
 

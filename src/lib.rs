@@ -22,14 +22,29 @@
 //! ```
 //! use std::collections::HashMap;
 //! use cmdb_ip_mapping::ip_mapping_connect::IpMappingCoProcessFunction;
-//! use rlink_connector_kafka::{BOOTSTRAP_SERVERS, GROUP_ID, create_input_format};
+//! use rlink_connector_kafka::{BOOTSTRAP_SERVERS, GROUP_ID, create_input_format, InputFormatBuilder};
 //! use rlink::functions::flat_map::BroadcastFlagMapFunction;
+//! use rlink::core::element::types;
+//!
+//! pub const FIELD_TYPE: [u8; 2] = [
+//!     // 0: timestamp
+//!     types::U64,
+//!     // 1: app_id
+//!     types::STRING,
+//! ];
+//! pub const FIELD_NAME: [&'static str; 2] = [
+//!     // 0: timestamp
+//!     "timestamp",
+//!     // 1: app_id
+//!     "app_id",
+//! ];
+//! pub const FIELD_METADATA: FieldMetadata<53> = FieldMetadata::new(&FIELD_TYPE, &FIELD_NAME);
 //!
 //! let ip_mapping_input_format = {
 //!     let mut conf_map = HashMap::new();
 //!     conf_map.insert(BOOTSTRAP_SERVERS.to_string(), ip_mapping_kafka_servers);
 //!     conf_map.insert(GROUP_ID.to_string(), ip_mapping_group_id);
-//!     create_input_format(conf_map, vec![ip_mapping_kafka_topic], Some(10000), None)
+//!     InputFormatBuilder::new(conf_map, vec![ip_mapping_kafka_topic], None).build()
 //! };
 //!
 //! let ip_mapping_stream = env
@@ -39,7 +54,7 @@
 //! data_stream
 //!     .connect(
 //!          vec![CoStream::from(ip_mapping_stream)],
-//!          IpMappingCoProcessFunction::new(),
+//!          IpMappingCoProcessFunction::new(FnSchema::from(&FIELD_METADATA)),
 //!     )
 //! ```
 
