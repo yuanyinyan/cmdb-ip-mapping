@@ -24,8 +24,11 @@ pub fn load_ip_mapping_task(url: &str) {
     // 每天凌晨4点取全量IpMapping数据
     let now = current_timestamp().as_secs();
     let period = 24 * 60 * 60;
-    let diff = (now / period + 1) * period - 4 * 60 * 60 - now;
-    let start = Instant::now() + std::time::Duration::from_secs(diff);
+    let mut diff = ((now / period + 1) * period - 4 * 60 * 60 - now) as i64;
+    if diff < 0 {
+        diff = diff + period as i64;
+    }
+    let start = Instant::now() + std::time::Duration::from_secs(diff as u64);
 
     std::thread::spawn(move || {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
